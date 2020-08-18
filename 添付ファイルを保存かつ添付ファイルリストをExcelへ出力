@@ -1,0 +1,86 @@
+Sub 添付ファイルを保存かつ添付ファイルリストをExcelへ出力()
+
+    Dim objInbox As Object
+    Dim objFolder As Object
+    Dim strPath As String
+    Dim i As Long
+    
+    '日付用定義
+    Dim strDay As String
+    
+    'フォルダ名をyyyymmdd形式で入力
+    strDay = Format(Date, "yyyymmdd")
+    strDay = strDay & "\"
+    
+    'Excel用定義
+    Dim myExcel As Excel.Application
+    Dim objBook As Excel.Workbook
+    Dim objSheet As Excel.worksheet
+    Dim n As Long
+    
+    'Excelオブジェクト生成、ブックの追加
+    Set myExcel = CreateObject("Excel.Application")
+    Set objBook = myExcel.Workbooks.Add()
+    Set objSheet = objBook.sheets(1)
+
+    '項目目を追加
+    objSheet.Cells(1, 1) = "ID"
+    objSheet.Cells(1, 2) = "件名"
+    objSheet.Cells(1, 3) = "送信者"
+    objSheet.Cells(1, 4) = "受信日時"
+    objSheet.Cells(1, 5) = "添付ファイル"
+    objSheet.Cells(1, 6) = "添付ファイルのパス"
+    
+    '添付ファイルリストを書き込む行の位置
+    n = 2
+    
+     
+    Set objInbox = GetNamespace("MAPI").GetDefaultFolder(olFolderInbox)
+    
+    '添付ファイルがあるメールのフォルダを指定します。2階層以上ある場合は「.Folders.Item(＜フォルダ名＞)」を追加してください。
+    Set objFolder = objInbox.Folders.Item("PC情報")
+    
+    '添付ファイルの保存先をパスで指定します。※日付フォルダ追加
+    strPath = "C:\Users\matsumoto\Desktop\PC情報取得" & strDay
+    
+    '日付フォルダがなければ作成
+    If Dir(strPath, vbDirectory) = "" Then
+        MkDir strPath
+    End If
+    
+    For Each objitem In objFolder.Items
+        For i = 1 To objitem.Attachments.Count
+            '添付ファイルに拡張子がある場合のみ処理します。
+            If InStr(objitem.Attachments.Item(i), ".") <> 0 Then
+            
+                objitem.Attachments.Item(i).SaveAsFile strPath & objitem.Attachments.Item(i)
+                
+               'Excelへ添付ファイル情報を追加
+                objSheet.Cells(n, 1) = n - 1
+                objSheet.Cells(n, 2) = objitem.ConversationTopic '件名
+                objSheet.Cells(n, 3) = objitem.SenderName '送信者
+                objSheet.Cells(n, 4) = objitem.ReceivedTime '受信日時
+                objSheet.Cells(n, 5) = objitem.Attachments.Item(i) '添付ファイル
+                objSheet.Cells(n, 6) = strPath & objitem.Attachments.Item(i)   '添付ファイルのパス"
+                n = n + 1
+            End If
+        Next i
+    Next objitem
+ 
+    '添付ファイル保存場所へExcelを保存　※ファイル名は適当な名前に変えてください。
+    objBook.SaveAs strPath & "添付ファイルリスト.xlsx"
+    
+    'Excelブックを閉じます。
+    objBook.Close SaveChanges:=False
+    
+    Set objitem = Nothing
+    Set objInbox = Nothing
+    Set objFolder = Nothing
+    Set objSheet = Nothing
+    Set objitem = Nothing
+
+End Sub
+
+Private Sub Application_ItemSend(ByVal Item As Object, Cancel As Boolean)
+
+End Sub
